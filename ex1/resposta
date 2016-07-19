@@ -1,0 +1,16 @@
+
+4. Sua primeira atividade é descartar as linhas que tem nenhum ou apenas um traço depois
+de remote ou de local. Exemplo, as linhas abaixo devem ser DESCARTADAS:
+
+Filtra o log para exibir apenas as linhas que possuem local ou remote seguido de 2 traços.
+awk -F: '/[local|remote] - - /' access_log 
+
+5. Sumarize os dados desse arquivo indicando:
+a) quantas requisições locais foram feitas
+	awk -F: '/[local] - - /' access_log | wc -l  
+b) quantas requisições remotas foram feitas
+	awk -F: '/[remote] - - /' access_log | wc -l  
+c) em média, qual a hora em que requisições locais são feitas
+	awk -F: '/[local] - - /' access_log | cut -d':' -f2 | awk '{ total += $1; count++ } END { print total/count }' 
+d) em média, qual a hora em que requisições remotas são feitas
+	awk -F: '/[remote] - - /' access_log | cut -d':' -f2 | awk '{ total += $1; count++ } END { print total/count }' 
