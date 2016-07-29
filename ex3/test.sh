@@ -1,6 +1,12 @@
 #!/bin/bash
 # by André L. Abrantes - Julho de 2016
 
+export RESULTADOS="/tmp/resultados_exercicios.out"
+
+if [ -e $RESULTADOS ]; then
+	rm $RESULTADOS
+fi
+
 # Função para executar o teste de um exercício.
 #
 # @param $1 Exercício a ser testado
@@ -28,9 +34,9 @@ function testaExercicioAluno {
 	diff /tmp/EXERCICIO_$EXERC"_"$TESTE"_"$NOME.out EXERCICIO_$EXERC"_"$TESTE.out
 
 	if [ $(diff /tmp/EXERCICIO_$EXERC"_"$TESTE"_"$NOME.out EXERCICIO_$EXERC"_"$TESTE.out | wc -l) -gt 0 ]; then
-		return 1 # Saída errada
+		return 1
 	else
-		return 0 # Saída correta
+		return 0
 	fi
 }
 
@@ -40,6 +46,7 @@ function testaExercicioAluno {
 # @param $2 Nome do Aluno [opcional]
 #
 function testaExercicios {
+	echo -e "\nExercício $1:" >> $RESULTADOS
 	if [ $2 ]; then
 		NOMES_ALUNOS=$2
 	else
@@ -49,9 +56,18 @@ function testaExercicios {
 	TESTES_ENTRADA=$(ls . | grep "EXERCICIO_$1[0-9_]*.in" | wc -l)
 
 	for nome in $NOMES_ALUNOS; do
+		count=0
 		for teste in $(seq 1 $TESTES_ENTRADA); do
 			testaExercicioAluno $1 $nome $teste
+			if [ $? -eq 0 ]; then
+				count=$[$count + 1]
+			fi
 		done
+		if [ $count -eq $TESTES_ENTRADA ]; then
+			echo "$nome: Correto" >> $RESULTADOS
+		else
+			echo "$nome: Errou" >> $RESULTADOS
+		fi
 	done
 }
 
@@ -65,3 +81,7 @@ for exercicio in $EXERCICIOS; do
 	echo -e "\n================ Correção Exercício $exercicio =================="
 	testaExercicios $exercicio $2
 done
+
+echo -e "\n====================== Resultados ======================="
+cat $RESULTADOS
+echo -e "\n=========================================================\n"
