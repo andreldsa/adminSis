@@ -1,0 +1,538 @@
+/*  
+ * Primeira etapa do projeto de Compiladores 2016.1
+ * 
+ * Integrantes:
+ * 		Andre L. S. Abrantes
+ * 		Lucas R. Andrade
+ * 		Julio L. Junior
+ */
+
+grammar compiladores.ufcg.edu.br.Javac with org.eclipse.xtext.common.Terminals hidden(WS, ML_COMMENT, SL_COMMENT)
+
+generate javac "http://www.ufcg.compiladores/edu/br/Javac"
+
+Model: // REGRA INICIAL
+	elements+=compilation_unit;
+
+compilation_unit:
+	{compilation_unit} package=(package_statement)? imports+=import_statement* type_declarations+=type_declaration*;
+
+package_statement:
+	PACKAGE name=package_name EOL;
+	
+type_declaration:
+	doc=DOC_COMMENT? (name=class_declaration | name=interface_declaration) EOL;
+
+interface_declaration:
+	modifiers+=modifier* INTERFACE interfaceName=ID
+	(EXTENDS extend=interface_name (COMMA extends+=(interface_name))*)?
+	LEFT_CURLY_BRACE (fields+=field_declaration*) RIGHT_CURLY_BRACE;
+
+class_declaration:
+	modifiers+=modifier* CLASS className=ID
+	(EXTENDS extend=class_name)?
+	(IMPLEMENTS implement=interface_name (COMMA implements+=(interface_name))*)?
+	LEFT_CURLY_BRACE (fields+=field_declaration*) RIGHT_CURLY_BRACE;
+
+field_declaration returns field_declaration:
+	(doc=DOC_COMMENT? (name=variable_declaration
+	| name=constructor_declaration
+	| name=method_declaration))
+	| (name=static_initializer)
+	| debug=EOL;
+
+method_declaration:
+	modifiers+=modifier* type=type name=ID LEFT_PARENTHESIS parameter=parameter_list? RIGHT_PARENTHESIS ((L_BRACKETS
+	R_BRACKETS) |
+	(BRACKETS))* ((statement=statement_block) | debug=EOL);
+
+method_call:
+	name=ID LEFT_PARENTHESIS parameter=parameter_list_method_call? RIGHT_PARENTHESIS;
+
+constructor_declaration:
+	modifiers+=modifier* name=ID LEFT_PARENTHESIS (parameters=parameter_list)? RIGHT_PARENTHESIS
+	statement=statement_block;
+
+parameter_list_method_call:
+	name=ID (COMMA parameters+=ID)*;
+
+parameter_list:
+	parameter=parameter (COMMA parameters+=parameter)*;
+
+parameter: // Ok
+	type=type name=ID ((L_BRACKETS R_BRACKETS) | (BRACKETS))*;
+
+variable_declaration: // Ok
+	(modifiers+=modifier)* type=type name=variable_declarator (COMMA names+=variable_declarator)* EOL;
+
+variable_declarator:  // Ok
+	name=ID ((L_BRACKETS R_BRACKETS) | (BRACKETS))* (EQUAL initializer=variable_initializer)?;
+
+variable_initializer:
+	(expression=expression)
+	| ({compilation_unit} => LEFT_CURLY_BRACE (variableInitializer1=variable_initializer (COMMA
+	variableIniatializer2+=variable_initializer)* (COMMA)?)? RIGHT_CURLY_BRACE);
+
+expression:
+	=> ((numericExpression3=numeric_expression_NR)) aux=expression_alfa
+	| (logicalExpression=logical_expression_NR) aux=expression_alfa
+	| (bitExpression=bit_expression_NR) aux=expression_alfa
+	| => (castExpression=cast_expression) aux=expression_alfa
+	| => (creatingExpression=creating_expression) aux=expression_alfa
+	| (literalExpression=literal_expression) aux=expression_alfa
+	| (null=NULL) aux=expression_alfa
+	| (super=SUPER) aux=expression_alfa
+	| (this=THIS) aux=expression_alfa
+	| (name=ID) aux=expression_alfa;
+
+expression_alfa:
+	((LEFT_PARENTHESIS argList=arg_list? RIGHT_PARENTHESIS)) aux=expression_alfa
+	| ((L_BRACKETS expression2=expression R_BRACKETS)) aux=expression_alfa
+	| (('.' expression2=expression)) aux=expression_alfa
+	| ((COMMA expressionComma=expression)) aux=expression_alfa
+	| ((INSTANCEOF (name=class_name))) aux=expression_alfa
+	| (sgin=(INCREMENT | DECREMENT) aux=expression_alfa)
+	| (numericSign=(PLUS | PLUS_EQUAL | MINUS | MINUS_EQUAL | MULTIPLY | MULTIPLY_EQUAL | DIVIDE | DIVIDE_EQUAL | MODULE
+	| MODULE_EQUAL) exp2=expression aux=expression_alfa)
+	| (testingSign=(BT | ST | BE | SE | DOUBLE_EQUAL | DIFFERENT) exp1=expression aux=expression_alfa)
+	| ((logicalSign=(OR
+	| OR_EQUAL
+	| EXP
+	| EXP_EQUAL
+	| DOUBLE_OR_EQUAL
+	| MODULE
+	| MODULE_EQUAL)
+	| ampersand=ampersand_rule) exp1=expression aux=expression_alfa)
+	| (WAT exp1=expression COLON exp2=expression aux=expression_alfa)
+	| (stringSign=(PLUS | PLUS_EQUAL) exp1=expression aux=expression_alfa)
+	| (bitSign=(R_SHIFT_EQUAL | L_SHIFT | R_SHIFT | SUPER_SHIFT) expressionBit=expression aux=expression_alfa)
+	| {Expression_aux};
+
+ampersand_rule:
+	(a1=AMPERSAND (a2=AMPERSAND | EQUAL)?);
+
+float_literal:
+	decimalDigits1=INT '.' (decimalDigits2=INT)? (exp=EXPOENT_PART)?
+	/*(expoentPart=Expoent_part)?*/ (floatTypeSufix=FLOAT_TYPE_SUFIX)?;
+
+EXPOENT_PART:
+	EXPONENTIAL (INT);
+	
+creating_expression:
+	NEW ((className=class_name LEFT_PARENTHESIS argList=arg_list RIGHT_PARENTHESIS)
+	| (typeSpecifier=type_specifier (L_BRACKETS expression=expression R_BRACKETS)? (L_BRACKETS R_BRACKETS | BRACKETS)*)
+	| (LEFT_PARENTHESIS expression=expression RIGHT_PARENTHESIS));
+
+literal_expression:
+	((exp=HEXA LONG?) | (exp1=INT LONG?))
+	| exp2=float_literal
+	| (string=STRING)
+	| (char=CHAR);
+
+terminal INTERFACE:
+	"interface";
+
+terminal EXTENDS:
+	"extends";
+
+terminal PACKAGE:
+	"package";
+
+terminal DOC_COMMENT:
+	'/**';	
+
+terminal IMPLEMENTS:
+	"implements";
+
+terminal CLASS:
+	"class";
+
+terminal EQUAL:
+	"=";
+
+terminal NULL:
+	"NULL";
+
+terminal THIS:
+	"this";
+
+terminal SUPER:
+	"super";
+
+terminal INSTANCEOF:
+	"instanceof";
+
+terminal L_SHIFT:
+	"<<";
+
+terminal R_SHIFT:
+	">>";
+
+terminal SUPER_SHIFT:
+	">>>";
+
+terminal R_SHIFT_EQUAL:
+	">>=";
+
+terminal DOUBLE_OR_EQUAL:
+	"||=";
+
+terminal OR:
+	"|";
+
+terminal OR_EQUAL:
+	"|=";
+
+terminal EXP:
+	"^";
+
+terminal EXP_EQUAL:
+	"^=";
+
+terminal DOUBLE_EQUAL:
+	"==";
+
+terminal DIFFERENT:
+	"!=";
+
+terminal BT:
+	">";
+
+terminal ST:
+	"<";
+
+terminal BE:
+	">=";
+
+terminal SE:
+	"<=";
+
+terminal DIVIDE:
+	"/";
+
+terminal DIVIDE_EQUAL:
+	"/=";
+
+terminal MODULE:
+	"%";
+
+terminal MODULE_EQUAL:
+	"%=";
+
+terminal PLUS_EQUAL:
+	"+=";
+
+terminal MINUS_EQUAL:
+	"-=";
+
+terminal MULTIPLY:
+	"*";
+
+terminal MULTIPLY_EQUAL:
+	"*=";
+
+terminal WAT:
+	"?";
+
+terminal AMPERSAND:
+	"ampersand";
+	
+terminal FLOAT_TYPE_SUFIX:
+	('f' | 'd');
+
+terminal EXPONENTIAL:
+	('e' | 'e+' | 'e-');
+
+terminal CHAR:
+	"'" . "'";
+
+terminal PLUS:
+	'+';
+
+terminal HEXA:
+	('0' 'x' ('0'..'9' 'a'..'f')*);
+
+terminal LONG:
+	"l";
+
+terminal STRING:
+	'"'->'"';
+
+terminal VOID: 
+	"void";
+
+/* FIXME: Remover para entrega 
+ * Fim: Lucas
+ * Início: Andre
+ */
+
+terminal COMMA: // Ok
+	",";
+
+terminal LEFT_CURLY_BRACE: // Ok
+	"{";
+
+terminal RIGHT_CURLY_BRACE: // Ok
+	"}";
+
+terminal BRACKETS: // Ok
+	"[]";
+
+terminal L_BRACKETS: // Ok
+	"[";
+
+terminal R_BRACKETS: // Ok
+	"]";
+	
+terminal COLON:// Ok
+	":";
+	
+terminal NEW:// Ok
+	"new";
+
+cast_expression: // Ok
+	(LEFT_PARENTHESIS type=type RIGHT_PARENTHESIS expression=expression);
+
+bit_expression_NR: // Ok 
+	(NOT expression=expression);
+
+logical_expression_NR: // Ok
+	(EXCLAMATION expression=expression)
+	| true=TRUE
+	| false=FALSE;
+
+arg_list: // Ok
+	expression=expression (COMMA expressions+=expression)*;
+
+numeric_expression_NR: // Ok
+	sinal_numeric=(MINUS | INCREMENT | DECREMENT) expression=expression;
+
+type: // Ok
+	name=type_specifier ((L_BRACKETS R_BRACKETS) | (BRACKETS))*;
+
+type_specifier:  // Ok
+	BOOLEAN
+	| BYTE
+	| CHAR_TYPE
+	| SHORT
+	| INT_TYPE
+	| FLOAT
+	| LONG_TYPE
+	| DOUBLE
+	| class_name
+	| interface_name;
+
+modifier: // Ok
+	MOD | STATIC;
+
+static_initializer: // Ok
+	static=STATIC name=statement_block;
+
+statement_block: // Ok
+	{statement_block} LEFT_CURLY_BRACE (statements+=statement*) RIGHT_CURLY_BRACE;
+
+statement: // Ok
+	(variable=variable_declaration) // Ok
+	| (expressionx=expression EOL) // Ok
+	| (statement_block) // Ok
+	| (ifStatement=if_statement) // Ok
+	| (doStatement=do_statement) // Ok
+	| (whileStatement=while_statement) // Ok
+	| (forStatement=for_statement) // Ok
+	| (try=try_statement) // Ok
+	| (switchStatement=switch_statement) // Ok
+	| (syncStatement=synchronized_statement) // Ok
+	| (returnStatement=return_statement) // Ok
+	| (throwStatement=throw_statement) // Ok
+	| (name=ID COLON statements+=statement) // Ok
+	| (breakStatement=break_statement) // Ok
+	| (continueStatement=continue_statement) // Ok
+	| {statement} EOL; // Ok
+
+continue_statement: // Ok
+	{statement} CONTINUE (name=ID)? EOL;
+
+break_statement: // OK
+	{statement} BREAK (name=ID)? EOL;
+
+throw_statement: // Ok
+	THROW expression=expression EOL;
+
+synchronized_statement: // Ok
+	{statement} SYNCHRONIZED
+			LEFT_PARENTHESIS expression=expression RIGHT_PARENTHESIS 
+				statements+=statement;
+
+switch_statement:// Ok
+	{switch_statement}
+	SWITCH 
+		LEFT_PARENTHESIS expression=expression RIGHT_PARENTHESIS LEFT_CURLY_BRACE
+			(( CASE expressions+=expression COLON ) 
+				| ( DEFAULT COLON ) 
+				| ( statements+=statement ))*
+		RIGHT_CURLY_BRACE;
+
+for_statement: // Ok
+	FOR 
+		LEFT_PARENTHESIS 
+			( variable=variable_declaration | pv=EOL | ( expression=expression EOL ) )
+			( expression2=expression )? EOL
+			( expression3=expression )? EOL
+		RIGHT_PARENTHESIS 
+		statement=statement;
+
+while_statement: // Ok
+	WHILE LEFT_PARENTHESIS expression=expression RIGHT_PARENTHESIS statement=statement;
+
+do_statement: // Ok
+	DO statement=statement WHILE LEFT_PARENTHESIS expression=expression RIGHT_PARENTHESIS EOL;
+
+if_statement: // Ok
+	IF LEFT_PARENTHESIS expression=expression RIGHT_PARENTHESIS statement=statement
+	(=> ELSE elseStatement=statement)?;
+
+return_statement:  // Ok
+	{return_statement} RETURN (expression=expression)? EOL;
+	
+try_statement: // Ok
+	try=TRY tryStatement=statement (=> catchs+=CATCH LEFT_PARENTHESIS parameters+=parameter RIGHT_PARENTHESIS
+	catchStatements+=statement)* (=> finally=FINALLY finallyStatement=statement)?;
+	
+import_statement: // Ok
+	IMPORT
+	((packagename=package_name '.' MULTIPLY EOL)
+	| (className=class_name | interfaceName=interface_name)) EOL;
+
+package_name:  // OK
+	ID package_name_aux;
+
+package_name_aux: // OK
+	('.' ID)*;
+
+class_name: // OK
+	ID | package_name '.' ID;
+
+interface_name:  // OK
+	ID | package_name;
+	
+terminal BOOLEAN: // Ok
+	"boolean"; 
+
+terminal BYTE: // Ok
+	"byte";
+
+terminal CHAR_TYPE: // Ok
+	"char";
+	
+terminal SHORT: // Ok
+	"short";
+
+terminal INT_TYPE: // Ok
+	"int";
+	
+terminal FLOAT: // Ok
+	"float";
+
+terminal LONG_TYPE: // Ok
+	"long";
+
+terminal DOUBLE: // Ok
+	"double";
+
+terminal STATIC: // Ok
+	'static';
+
+terminal CONTINUE: // OK
+	'continue';
+
+terminal BREAK: // OK
+	'break';
+
+terminal THROW: // Ok
+	"throw";
+	
+terminal SYNCHRONIZED: // Ok
+	'synchronized';
+
+terminal DEFAULT:// Ok
+	"default";
+
+terminal CASE:// Ok
+	"case";
+
+terminal SWITCH:// Ok
+	"switch";
+
+terminal FOR: // Ok
+	"for";
+
+terminal RETURN: // Ok
+	"return";
+
+terminal LEFT_PARENTHESIS: // Ok
+	"(";
+
+terminal RIGHT_PARENTHESIS: // Ok
+	")";
+
+terminal EOL: // OK
+	";";
+
+terminal IF: // Ok
+	"if";
+
+terminal ELSE: // Ok
+	"else";
+
+terminal DO: // Ok
+	"do";
+
+terminal WHILE: // Ok
+	"while";
+
+terminal IMPORT: // Ok
+	"import";
+
+terminal DECREMENT: // Ok
+	'--';
+
+terminal INCREMENT: // Ok
+	'++';
+
+terminal MINUS: // Ok
+	'-';
+
+terminal NOT: // Ok 
+	"~";
+
+terminal EXCLAMATION:  // Ok
+	"!";
+
+terminal FALSE: // Ok
+	'false';
+
+terminal TRUE: // Ok
+	'true';
+
+terminal MOD: // Ok
+	"public"
+	| "private"
+	| "protected"
+	| "final"
+	| "native"
+	| "synchronized"
+	| "abstract"
+	| "threadsafe"
+	| "transient";
+
+terminal TRY: // Ok
+	'try';
+
+terminal CATCH: // Ok
+	'catch';
+
+terminal FINALLY: // Ok
+	'finally';
+
+terminal ID: // OK
+	('a'..'z' | 'A'..'Z' | '_' | '$') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9' | '$' | '\u00C0'..'\uFFFF')*;
